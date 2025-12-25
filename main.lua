@@ -2,11 +2,7 @@ local utils = require("mp.utils")
 local msg = require("mp.msg")
 
 local sep = package.config:sub(1, 1)
--- https://github.com/mpv-player/mpv/issues/11934#issue-1804666180
-local sub_exts = {
-    "utf", "utf8", "utf-8", "idx", "sub", "srt", "rt", "ssa", "ass", "mks",
-    "vtt", "sup", "scc", "smi", "lrc", "pgs", "sbv",
-}
+local sub_exts = mp.get_property_native("sub-auto-exts")
 
 local config = {
     auto_select_first_matching_sub = true,  -- if false, auto select last
