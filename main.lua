@@ -135,7 +135,7 @@ local function load_subs()
 
     for _, sub in ipairs(subs) do
         if episode_number(sub, ascending_subs) == episode then
-            mp.commandv("sub-add", sub)
+            mp.commandv("sub-add", dir .. sep .. sub)
             print("Added subtitle: " .. sub)
         end
     end
