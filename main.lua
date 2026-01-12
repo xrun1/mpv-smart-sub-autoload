@@ -18,7 +18,7 @@ local function file_name(path)
 end
 
 local function file_ext(path)
-    return path:match(".*%.(.*)")
+    return path:match(".*%.(.*)") or ""
 end
 
 local function extract_numbers(str)
@@ -83,12 +83,18 @@ local function episode_number(file, files)
         local numbers = extract_numbers(file)
         local other_numbers = extract_numbers(other_file)
 
-        local episode = nil
-        for _, num in ipairs(numbers) do
-            if array_count(other_numbers, num) < array_count(numbers, num) then
-                return num
+        for i = 1, #numbers do
+            if numbers[i] ~= other_numbers[i] then
+                return numbers[i]
             end
         end
+        return numbers[1]
+        -- local episode = nil
+        -- for _, num in ipairs(numbers) do
+        --     if array_count(other_numbers, num) < array_count(numbers, num) then
+        --         return num
+        --     end
+        -- end
     end
 
     for i = current_index + 1, #files do
