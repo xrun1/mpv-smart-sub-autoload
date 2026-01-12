@@ -22,7 +22,7 @@ local function file_ext(path)
 end
 
 local function extract_numbers(str)
-    numbers = {}
+    local numbers = {}
     str:gsub("%d+", function(num) table.insert(numbers, tonumber(num)) end)
     return numbers
 end
@@ -51,7 +51,7 @@ local function array_has(array, key)
 end
 
 local function filter_array(array, predicate)
-    new = {}
+    local new = {}
     for i, key in ipairs(array) do
         if predicate(key) then
             table.insert(new, key)
@@ -83,9 +83,9 @@ local function episode_number(file, files)
         local numbers = extract_numbers(file)
         local other_numbers = extract_numbers(other_file)
 
-        for i = 1, #numbers do
-            if numbers[i] ~= other_numbers[i] then
-                return numbers[i]
+        for n = 1, #numbers do
+            if numbers[n] ~= other_numbers[n] then
+                return numbers[n]
             end
         end
         return numbers[1]
@@ -98,11 +98,11 @@ local function episode_number(file, files)
     end
 
     for i = current_index + 1, #files do
-        episode = episode_for_file_at(i)
+        local episode = episode_for_file_at(i)
         if episode ~= nil then return episode end
     end
     for i = current_index - 1, 1, -1 do
-        episode = episode_for_file_at(i)
+        local episode = episode_for_file_at(i)
         if episode ~= nil then return episode end
     end
 
@@ -126,7 +126,7 @@ local function load_subs()
     local subs = filter_array(files, function(file)
         return array_has(sub_exts, file_ext(file):lower())
     end)
-    ascending_subs = copy_array(subs)
+    local ascending_subs = copy_array(subs)
     table.sort(ascending_subs)
 
     if config.auto_select_first_matching_sub then
