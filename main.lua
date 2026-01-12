@@ -36,16 +36,6 @@ local function index_of(array, key)
     return nil
 end
 
-local function array_count(array, key)
-    local count = 0
-    for i, key2 in ipairs(array) do
-        if key2 == key then
-            count = count + 1
-        end
-    end
-    return count
-end
-
 local function array_has(array, key)
     return index_of(array, key) ~= nil
 end
@@ -89,12 +79,6 @@ local function episode_number(file, files)
             end
         end
         return numbers[1]
-        -- local episode = nil
-        -- for _, num in ipairs(numbers) do
-        --     if array_count(other_numbers, num) < array_count(numbers, num) then
-        --         return num
-        --     end
-        -- end
     end
 
     for i = current_index + 1, #files do
