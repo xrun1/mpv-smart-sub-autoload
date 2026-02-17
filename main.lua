@@ -5,6 +5,7 @@ local sub_exts = mp.get_property_native("sub-auto-exts")
 
 local config = {
     auto_select_first_matching_sub = true,
+    sub_search_depth = 2,
 }
 require("mp.options").read_options(config)
 
@@ -57,6 +58,37 @@ local function is_sub_already_loaded(sub_name)
     return false
 end
 
+local function collect_files_recursive(dir, max_depth, current_depth)
+    current_depth = current_depth or 0
+    local result = {}
+    local seen = {}
+
+    local function scan(d, depth)
+        local files = utils.readdir(d, "files")
+        if files then
+            for _, f in ipairs(files) do
+                if not seen[f] then
+                    seen[f] = true
+                    result[#result + 1] = { name = f, path = d .. f }
+                end
+            end
+        end
+
+        if depth < max_depth then
+            local dirs = utils.readdir(d, "dirs")
+            if dirs then
+                table.sort(dirs)
+                for _, sub in ipairs(dirs) do
+                    scan(d .. sub .. "/", depth + 1)
+                end
+            end
+        end
+    end
+
+    scan(dir, current_depth)
+    return result
+end
+
 local function episode_number(file, sorted_files)
     local idx = index_of(sorted_files, file)
     if not idx then
@@ -107,10 +139,10 @@ local function load_subs()
 
     local ext = file_ext(file):lower()
 
-    local all_files = utils.readdir(dir, "files")
-    if not all_files then return end
+    local all_files_current = utils.readdir(dir, "files")
+    if not all_files_current then return end
 
-    local videos = filter_array(all_files, function(f)
+    local videos = filter_array(all_files_current, function(f)
         return file_ext(f):lower() == ext
     end)
     table.sort(videos)
@@ -118,46 +150,50 @@ local function load_subs()
     local episode = episode_number(file, videos)
     if not episode then return end
 
-    local subs = filter_array(all_files, function(f)
-        return array_has(sub_exts, file_ext(f):lower())
+    local all_entries = collect_files_recursive(dir, config.sub_search_depth)
+
+    local sub_entries = filter_array(all_entries, function(entry)
+        return array_has(sub_exts, file_ext(entry.name):lower())
     end)
-    if #subs == 0 then return end
+    if #sub_entries == 0 then return end
 
     local groups = {}
-    for _, sub in ipairs(subs) do
-        local nums = extract_numbers(sub)
-        local key = sub:gsub("%d+", "#")
+    for _, entry in ipairs(sub_entries) do
+        local key = entry.name:gsub("%d+", "#")
         if not groups[key] then groups[key] = {} end
-        groups[key][#groups[key] + 1] = sub
+        groups[key][#groups[key] + 1] = entry
     end
 
     local matched_subs = {}
 
     for _, group in pairs(groups) do
         if #group > 1 then
-            table.sort(group)
-            for _, sub in ipairs(group) do
-                if episode_number(sub, group) == episode then
-                    matched_subs[#matched_subs + 1] = sub
+            table.sort(group, function(a, b) return a.name < b.name end)
+            local names = {}
+            for i, entry in ipairs(group) do names[i] = entry.name end
+
+            for i, entry in ipairs(group) do
+                if episode_number(entry.name, names) == episode then
+                    matched_subs[#matched_subs + 1] = entry
                 end
             end
         else
-            if sub_matches_episode(group[1], episode) then
+            if sub_matches_episode(group[1].name, episode) then
                 matched_subs[#matched_subs + 1] = group[1]
             end
         end
     end
 
     if config.auto_select_first_matching_sub then
-        table.sort(matched_subs, function(a, b) return a > b end)
+        table.sort(matched_subs, function(a, b) return a.name > b.name end)
     else
-        table.sort(matched_subs)
+        table.sort(matched_subs, function(a, b) return a.name < b.name end)
     end
 
-    for _, sub in ipairs(matched_subs) do
-        if not is_sub_already_loaded(sub) then
-            mp.commandv("sub-add", dir .. sub)
-            msg.info("Added subtitle: " .. sub)
+    for _, entry in ipairs(matched_subs) do
+        if not is_sub_already_loaded(entry.name) then
+            mp.commandv("sub-add", entry.path)
+            msg.info("Added subtitle: " .. entry.path)
         end
     end
 end
