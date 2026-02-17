@@ -92,6 +92,11 @@ local function episode_number(file, sorted_files)
     return numbers[1]
 end
 
+local function sub_matches_episode(sub_file, episode)
+    local numbers = extract_numbers(sub_file)
+    return array_has(numbers, episode)
+end
+
 local function load_subs()
     local path = mp.get_property("path")
     if not path then return end
@@ -118,19 +123,39 @@ local function load_subs()
     end)
     if #subs == 0 then return end
 
-    local sorted_subs = {}
-    for i = 1, #subs do sorted_subs[i] = subs[i] end
-    table.sort(sorted_subs)
-
-    if config.auto_select_first_matching_sub then
-        table.sort(subs, function(a, b) return a > b end)
-    else
-        table.sort(subs)
+    local groups = {}
+    for _, sub in ipairs(subs) do
+        local nums = extract_numbers(sub)
+        local key = sub:gsub("%d+", "#")
+        if not groups[key] then groups[key] = {} end
+        groups[key][#groups[key] + 1] = sub
     end
 
-    for _, sub in ipairs(subs) do
-        if episode_number(sub, sorted_subs) == episode
-           and not is_sub_already_loaded(sub) then
+    local matched_subs = {}
+
+    for _, group in pairs(groups) do
+        if #group > 1 then
+            table.sort(group)
+            for _, sub in ipairs(group) do
+                if episode_number(sub, group) == episode then
+                    matched_subs[#matched_subs + 1] = sub
+                end
+            end
+        else
+            if sub_matches_episode(group[1], episode) then
+                matched_subs[#matched_subs + 1] = group[1]
+            end
+        end
+    end
+
+    if config.auto_select_first_matching_sub then
+        table.sort(matched_subs, function(a, b) return a > b end)
+    else
+        table.sort(matched_subs)
+    end
+
+    for _, sub in ipairs(matched_subs) do
+        if not is_sub_already_loaded(sub) then
             mp.commandv("sub-add", dir .. sub)
             msg.info("Added subtitle: " .. sub)
         end
