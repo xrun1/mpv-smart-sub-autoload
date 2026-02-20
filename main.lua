@@ -99,16 +99,18 @@ local function load_subs()
     local file = file_name(path)
     local ext = file_ext(path):lower()
 
-    local files = utils.readdir(dir, "files")
-    local videos = filter_array(files, function(file)
+    local all_files = utils.readdir(dir, "files")
+    local subs = filter_array(all_files, function(file)
+        return array_has(sub_exts, file_ext(file):lower())
+    end)
+    if next(subs) == nil then return end
+
+    local videos = filter_array(all_files, function(file)
         return file_ext(file):lower() == ext
     end)
     local episode = episode_number(file, videos)
     if episode == nil and #videos > 1 then return end
 
-    local subs = filter_array(files, function(file)
-        return array_has(sub_exts, file_ext(file):lower())
-    end)
     local ascending_subs = copy_array(subs)
     table.sort(ascending_subs)
 
