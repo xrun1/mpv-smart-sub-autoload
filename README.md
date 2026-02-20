@@ -42,8 +42,18 @@ gets loaded.
 - Don't mix multiple shows, or seasons of a same show, in the same folder
 - Might fail with very exotic naming schemes
 
-
 ## Installation
 
 Git clone or click **Code** → **Download ZIP** and then extract into your mpv
 scripts folder (usually `%APPDATA%\mpv\scripts` or `~/.config/mpv/scripts`).
+
+## Configuration
+
+Create a `smart-sub-autoload.conf` file in your script-opts folder
+(usually `%APPDATA%\mpv\script-opts` or `~/.config/mpv/script-opts`)
+to change the default options.
+
+To reverse the order in which subtitles are loaded when multiple ones
+are found for a video, add the line:
+
+  auto_select_first_matching_sub=no
