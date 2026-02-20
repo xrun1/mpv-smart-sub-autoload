@@ -33,6 +33,9 @@ When you open `01-01.mkv` in mpv, the script will:
   saving you from either having to rename everything by hand or
   picking files every time an episode starts.
 
+If there's only one video in a folder, then any subtitle in that folder
+gets loaded.
+
 ## Limitations
 
 - Videos and subtitles must be in the same folder

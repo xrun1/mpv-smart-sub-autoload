@@ -62,7 +62,6 @@ local function episode_number(file, files)
     --     ...
     -- if file = the first, return 02. For second, 02 too. For third, 03.
 
-
     files = copy_array(files)
     table.sort(files)
     local current_index = index_of(files, file)
@@ -105,7 +104,7 @@ local function load_subs()
         return file_ext(file):lower() == ext
     end)
     local episode = episode_number(file, videos)
-    if episode == nil then return end
+    if episode == nil and #videos > 1 then return end
 
     local subs = filter_array(files, function(file)
         return array_has(sub_exts, file_ext(file):lower())
@@ -120,7 +119,8 @@ local function load_subs()
     end
 
     for _, sub in ipairs(subs) do
-        if episode_number(sub, ascending_subs) == episode then
+        if episode == nil or
+           episode_number(sub, ascending_subs) == episode then
             mp.commandv("sub-add", dir .. sep .. sub)
             print("Added subtitle: " .. sub)
         end
