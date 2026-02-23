@@ -109,15 +109,10 @@ local function collect_subs(dir, prefix)
 
     local files = utils.readdir(dir, "files")
     if files then
-        if prefix ~= "" then
-            for _, f in ipairs(files) do
-                if is_video_file(f) then
-                    return results
-                end
-            end
-        end
         for _, f in ipairs(files) do
-            if is_sub_file(f) then
+            if is_video_file(f) then
+                if prefix ~= "" then return {} end
+            elseif is_sub_file(f) then
                 table.insert(results, {
                     path = dir .. sep .. f,
                     name = prefix .. f,
