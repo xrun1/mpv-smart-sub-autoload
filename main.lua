@@ -29,7 +29,7 @@ local function file_name(path)
 end
 
 local function file_ext(path)
-    return path:match(".*%.(.*)") or ""
+    return path:match("%.([^%.]+)$") or ""
 end
 
 local function extract_numbers(str)
@@ -56,10 +56,7 @@ local function filter_array(array, predicate)
 end
 
 local function sorted_copy(array)
-    local copy = {}
-    for i = 1, #array do
-        copy[i] = array[i]
-    end
+    local copy = {unpack(array)}
     table.sort(copy)
     return copy
 end
@@ -142,6 +139,9 @@ end
 
 local function load_subs()
     local path = mp.get_property("path")
+    
+    if not path or path:find("://") then return end
+
     local dir = base_dir(path)
     local file = file_name(path)
 
