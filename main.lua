@@ -2,10 +2,11 @@ local utils = require("mp.utils")
 local msg = require("mp.msg")
 
 local sep = package.config:sub(1, 1)
-local sub_exts = mp.get_property_native("sub-auto-exts")
+local SUB_EXTS = mp.get_property_native("sub-auto-exts")
+local VID_EXTS = mp.get_property_native("video-exts")
 
 local config = {
-    auto_select_first_matching_sub = true,  -- if false, auto select last
+    auto_select_first_matching_sub = true,
 }
 require "mp.options".read_options(config)
 
@@ -42,7 +43,7 @@ end
 
 local function filter_array(array, predicate)
     local new = {}
-    for i, key in ipairs(array) do
+    for _, key in ipairs(array) do
         if predicate(key) then
             table.insert(new, key)
         end
@@ -55,23 +56,14 @@ local function copy_array(array)
 end
 
 local function episode_number(file, files)
-    -- Try to find the earliest number that changes among files. With files =
-    --     Non Non Biyori.S02E02.CC.ja.srt
-    --     Non Non Biyori.S02E02.CC.ja_original.srt
-    --     Non Non Biyori.S02E03.CC.ja.srt
-    --     ...
-    -- if file = the first, return 02. For second, 02 too. For third, 03.
-
     files = copy_array(files)
     table.sort(files)
     local current_index = index_of(files, file)
 
     local episode_for_file_at = function(i)
         local other_file = files[i]
-
         local numbers = extract_numbers(file)
         local other_numbers = extract_numbers(other_file)
-
         for n = 1, #numbers do
             if numbers[n] ~= other_numbers[n] then
                 return numbers[n]
@@ -93,38 +85,86 @@ local function episode_number(file, files)
     return nil
 end
 
+local function is_sub_file(filename)
+    return array_has(SUB_EXTS, file_ext(filename):lower())
+end
+
+local function is_video_file(filename)
+    return array_has(VID_EXTS, file_ext(filename):lower())
+end
+
+local function collect_subs(dir, prefix)
+    prefix = prefix or ""
+    local results = {}
+
+    local files = utils.readdir(dir, "files")
+    if files then
+        if prefix ~= "" then
+            for _, f in ipairs(files) do
+                if is_video_file(f) then
+                    return results
+                end
+            end
+        end
+        for _, f in ipairs(files) do
+            if is_sub_file(f) then
+                table.insert(results, {
+                    path = dir .. sep .. f,
+                    name = prefix .. f,
+                })
+            end
+        end
+    end
+
+    local subdirs = utils.readdir(dir, "dirs")
+    if subdirs then
+        table.sort(subdirs)
+        for _, subdir in ipairs(subdirs) do
+            local sub_results = collect_subs(dir .. sep .. subdir, prefix .. subdir .. sep)
+            for _, entry in ipairs(sub_results) do
+                table.insert(results, entry)
+            end
+        end
+    end
+
+    return results
+end
+
 local function load_subs()
     local path = mp.get_property("path")
     local dir = base_dir(path)
     local file = file_name(path)
-    local ext = file_ext(path):lower()
 
     local all_files = utils.readdir(dir, "files")
-    local subs = filter_array(all_files, function(file)
-        return array_has(sub_exts, file_ext(file):lower())
-    end)
-    if next(subs) == nil then return end
+    if all_files == nil then return end
 
-    local videos = filter_array(all_files, function(file)
-        return file_ext(file):lower() == ext
+    local sub_entries = collect_subs(dir)
+    if next(sub_entries) == nil then return end
+
+    local videos = filter_array(all_files, function(f)
+        return is_video_file(f)
     end)
     local episode = episode_number(file, videos)
     if episode == nil and #videos > 1 then return end
 
-    local ascending_subs = copy_array(subs)
-    table.sort(ascending_subs)
+    local sub_names = {}
+    for _, entry in ipairs(sub_entries) do
+        table.insert(sub_names, entry.name)
+    end
+    local ascending_sub_names = copy_array(sub_names)
+    table.sort(ascending_sub_names)
 
     if config.auto_select_first_matching_sub then
-        table.sort(subs, function(a, b) return a > b end)  -- reverse
+        table.sort(sub_entries, function(a, b) return a.name > b.name end)
     else
-        table.sort(subs)
+        table.sort(sub_entries, function(a, b) return a.name < b.name end)
     end
 
-    for _, sub in ipairs(subs) do
+    for _, entry in ipairs(sub_entries) do
         if episode == nil or
-           episode_number(sub, ascending_subs) == episode then
-            mp.commandv("sub-add", dir .. sep .. sub)
-            print("Added subtitle: " .. sub)
+           episode_number(entry.name, ascending_sub_names) == episode then
+            mp.commandv("sub-add", entry.path)
+            print("Added subtitle: " .. entry.name)
         end
     end
 end
