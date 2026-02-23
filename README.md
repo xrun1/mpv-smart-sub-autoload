@@ -38,7 +38,6 @@ gets loaded.
 
 ## Limitations
 
-- Videos and subtitles must be in the same folder
 - Don't mix multiple shows, or seasons of a same show, in the same folder
 - Might fail with very exotic naming schemes
 
