@@ -137,6 +137,9 @@ end
 
 local function load_subs()
     local path = mp.get_property("path")
+    
+    if not path or path:find("://") then return end
+    
     local dir = base_dir(path)
     local file = file_name(path)
 
