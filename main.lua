@@ -32,9 +32,14 @@ local function file_ext(path)
     return path:match("%.([^%.]+)$") or ""
 end
 
+local numbers_cache = {}
 local function extract_numbers(str)
+    if numbers_cache[str] then return numbers_cache[str] end
+    
     local numbers = {}
     str:gsub("%d+", function(num) table.insert(numbers, tonumber(num)) end)
+    
+    numbers_cache[str] = numbers
     return numbers
 end
 
