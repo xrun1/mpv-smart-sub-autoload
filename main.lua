@@ -1,8 +1,6 @@
 local utils = require("mp.utils")
 local msg = require("mp.msg")
 
-local sep = package.config:sub(1, 1)
-
 local function to_set(array)
     local set = {}
     for _, v in ipairs(array) do
@@ -11,20 +9,23 @@ local function to_set(array)
     return set
 end
 
-local SUB_EXT_SET = to_set(mp.get_property_native("sub-auto-exts"))
-local VID_EXT_SET = to_set(mp.get_property_native("video-exts"))
+local SUB_EXT_SET = to_set(mp.get_property_native("sub-auto-exts") or {})
+local VID_EXT_SET = to_set(mp.get_property_native("video-exts") or {})
 
 local config = {
     auto_select_first_matching_sub = true,
+    max_depth = 3,
 }
 require("mp.options").read_options(config)
 
 local function base_dir(path)
-    return path:match("(.*" .. sep .. ")")
+    local dir, _ = utils.split_path(path)
+    return dir
 end
 
 local function file_name(path)
-    return path:match(".*" .. sep .. "(.*)")
+    local _, name = utils.split_path(path)
+    return name
 end
 
 local function file_ext(path)
@@ -103,31 +104,35 @@ local function episode_number(file, sorted_files)
     return nil
 end
 
-local function collect_subs(dir, prefix)
+local function collect_subs(dir, prefix, depth)
     prefix = prefix or ""
+    depth = depth or 0
     local results = {}
 
     local files = utils.readdir(dir, "files")
     if files then
         for _, f in ipairs(files) do
             if is_video_file(f) then
-                if prefix ~= "" then return {} end
+                if depth > 0 then return {} end
             elseif is_sub_file(f) then
                 table.insert(results, {
-                    path = dir .. sep .. f,
+                    path = utils.join_path(dir, f),
                     name = prefix .. f,
                 })
             end
         end
     end
 
-    local subdirs = utils.readdir(dir, "dirs")
-    if subdirs then
-        table.sort(subdirs)
-        for _, subdir in ipairs(subdirs) do
-            local sub_results = collect_subs(dir .. sep .. subdir, prefix .. subdir .. sep)
-            for _, entry in ipairs(sub_results) do
-                table.insert(results, entry)
+    if depth < config.max_depth then
+        local subdirs = utils.readdir(dir, "dirs")
+        if subdirs then
+            table.sort(subdirs)
+            for _, subdir in ipairs(subdirs) do
+                local next_dir = utils.join_path(dir, subdir)
+                local sub_results = collect_subs(next_dir, prefix .. subdir .. "/", depth + 1)
+                for _, entry in ipairs(sub_results) do
+                    table.insert(results, entry)
+                end
             end
         end
     end
@@ -137,9 +142,6 @@ end
 
 local function load_subs()
     local path = mp.get_property("path")
-    
-    if not path or path:find("://") then return end
-    
     local dir = base_dir(path)
     local file = file_name(path)
 
@@ -170,7 +172,7 @@ local function load_subs()
         if not episode or
            episode_number(entry.name, sorted_sub_names) == episode then
             mp.commandv("sub-add", entry.path)
-            print("Added subtitle: " .. entry.name)
+            msg.info("Added subtitle: " .. entry.name)
         end
     end
 end
