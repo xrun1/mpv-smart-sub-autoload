@@ -2,13 +2,22 @@ local utils = require("mp.utils")
 local msg = require("mp.msg")
 
 local sep = package.config:sub(1, 1)
-local SUB_EXTS = mp.get_property_native("sub-auto-exts")
-local VID_EXTS = mp.get_property_native("video-exts")
+
+local function to_set(array)
+    local set = {}
+    for _, v in ipairs(array) do
+        set[v] = true
+    end
+    return set
+end
+
+local SUB_EXT_SET = to_set(mp.get_property_native("sub-auto-exts"))
+local VID_EXT_SET = to_set(mp.get_property_native("video-exts"))
 
 local config = {
     auto_select_first_matching_sub = true,
 }
-require "mp.options".read_options(config)
+require("mp.options").read_options(config)
 
 local function base_dir(path)
     return path:match("(.*" .. sep .. ")")
@@ -29,41 +38,50 @@ local function extract_numbers(str)
 end
 
 local function index_of(array, key)
-    for i, key2 in ipairs(array) do
-        if key2 == key then
-            return i
-        end
+    for i, v in ipairs(array) do
+        if v == key then return i end
     end
     return nil
 end
 
-local function array_has(array, key)
-    return index_of(array, key) ~= nil
-end
-
 local function filter_array(array, predicate)
     local new = {}
-    for _, key in ipairs(array) do
-        if predicate(key) then
-            table.insert(new, key)
+    for _, v in ipairs(array) do
+        if predicate(v) then
+            table.insert(new, v)
         end
     end
     return new
 end
 
-local function copy_array(array)
-    return filter_array(array, function(_) return true end)
+local function sorted_copy(array)
+    local copy = {}
+    for i = 1, #array do
+        copy[i] = array[i]
+    end
+    table.sort(copy)
+    return copy
 end
 
-local function episode_number(file, files)
-    files = copy_array(files)
-    table.sort(files)
-    local current_index = index_of(files, file)
+local function is_sub_file(filename)
+    return SUB_EXT_SET[file_ext(filename):lower()]
+end
 
-    local episode_for_file_at = function(i)
-        local other_file = files[i]
-        local numbers = extract_numbers(file)
-        local other_numbers = extract_numbers(other_file)
+local function is_video_file(filename)
+    return VID_EXT_SET[file_ext(filename):lower()]
+end
+
+local function episode_number(file, sorted_files)
+    local idx = index_of(sorted_files, file)
+    if not idx then
+        msg.warn("Couldn't determine episode number for " .. file)
+        return nil
+    end
+
+    local numbers = extract_numbers(file)
+
+    local function compare(i)
+        local other_numbers = extract_numbers(sorted_files[i])
         for n = 1, #numbers do
             if numbers[n] ~= other_numbers[n] then
                 return numbers[n]
@@ -72,25 +90,17 @@ local function episode_number(file, files)
         return numbers[1]
     end
 
-    for i = current_index + 1, #files do
-        local episode = episode_for_file_at(i)
-        if episode ~= nil then return episode end
+    for i = idx + 1, #sorted_files do
+        local ep = compare(i)
+        if ep then return ep end
     end
-    for i = current_index - 1, 1, -1 do
-        local episode = episode_for_file_at(i)
-        if episode ~= nil then return episode end
+    for i = idx - 1, 1, -1 do
+        local ep = compare(i)
+        if ep then return ep end
     end
 
     msg.warn("Couldn't determine episode number for " .. file)
     return nil
-end
-
-local function is_sub_file(filename)
-    return array_has(SUB_EXTS, file_ext(filename):lower())
-end
-
-local function is_video_file(filename)
-    return array_has(VID_EXTS, file_ext(filename):lower())
 end
 
 local function collect_subs(dir, prefix)
@@ -136,23 +146,21 @@ local function load_subs()
     local file = file_name(path)
 
     local all_files = utils.readdir(dir, "files")
-    if all_files == nil then return end
+    if not all_files then return end
 
     local sub_entries = collect_subs(dir)
-    if next(sub_entries) == nil then return end
+    if not next(sub_entries) then return end
 
-    local videos = filter_array(all_files, function(f)
-        return is_video_file(f)
-    end)
-    local episode = episode_number(file, videos)
-    if episode == nil and #videos > 1 then return end
+    local videos = filter_array(all_files, is_video_file)
+    local sorted_videos = sorted_copy(videos)
+    local episode = episode_number(file, sorted_videos)
+    if not episode and #videos > 1 then return end
 
     local sub_names = {}
-    for _, entry in ipairs(sub_entries) do
-        table.insert(sub_names, entry.name)
+    for i, entry in ipairs(sub_entries) do
+        sub_names[i] = entry.name
     end
-    local ascending_sub_names = copy_array(sub_names)
-    table.sort(ascending_sub_names)
+    local sorted_sub_names = sorted_copy(sub_names)
 
     if config.auto_select_first_matching_sub then
         table.sort(sub_entries, function(a, b) return a.name > b.name end)
@@ -161,8 +169,8 @@ local function load_subs()
     end
 
     for _, entry in ipairs(sub_entries) do
-        if episode == nil or
-           episode_number(entry.name, ascending_sub_names) == episode then
+        if not episode or
+           episode_number(entry.name, sorted_sub_names) == episode then
             mp.commandv("sub-add", entry.path)
             print("Added subtitle: " .. entry.name)
         end
