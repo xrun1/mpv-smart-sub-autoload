@@ -1,13 +1,13 @@
 local utils = require("mp.utils")
 local msg = require("mp.msg")
 
-local function to_set(array)
-    local set = {}
-    for _, v in ipairs(array) do
-        set[v] = true
-    end
-    return set
-end
+local config = {
+    auto_select_first_matching_sub = true,
+    max_depth = 1,
+}
+
+require("mp.options").read_options(config)
+
 local DEFAULT_SUB_EXTS = {
     "ass", "idx", "lrc", "mks", "pgs", "rt", "sbv", "scc", "smi",
     "srt", "srv3", "ssa", "sub", "sup", "utf", "utf-8", "utf8", "vtt", "ytt"
@@ -18,35 +18,27 @@ local DEFAULT_VIDEO_EXTS = {
     "mov", "mp4", "mpeg", "mpg", "mxf", "ogv", "rmvb", "ts", "webm", "wmv", "y4m"
 }
 
+local function to_set(array)
+    local set = {}
+    for _, v in ipairs(array) do
+        set[v] = true
+    end
+    return set
+end
+
 local SUB_EXT_SET = to_set(mp.get_property_native("sub-auto-exts") or DEFAULT_SUB_EXTS)
 local VID_EXT_SET = to_set(mp.get_property_native("video-exts") or DEFAULT_VIDEO_EXTS)
-
-local config = {
-    auto_select_first_matching_sub = true,
-    max_depth = 1,
-}
-require("mp.options").read_options(config)
 
 local function file_ext(path)
     return path:match("%.([^%.]+)$") or ""
 end
 
-local numbers_cache = {}
-local function extract_numbers(str)
-    if numbers_cache[str] then return numbers_cache[str] end
-    
-    local numbers = {}
-    str:gsub("%d+", function(num) table.insert(numbers, tonumber(num)) end)
-    
-    numbers_cache[str] = numbers
-    return numbers
+local function is_sub_file(filename)
+    return SUB_EXT_SET[file_ext(filename):lower()]
 end
 
-local function index_of(array, key)
-    for i, v in ipairs(array) do
-        if v == key then return i end
-    end
-    return nil
+local function is_video_file(filename)
+    return VID_EXT_SET[file_ext(filename):lower()]
 end
 
 local function filter_array(array, predicate)
@@ -59,18 +51,19 @@ local function filter_array(array, predicate)
     return new
 end
 
-local function sorted_copy(array)
-    local copy = {unpack(array)}
-    table.sort(copy)
-    return copy
+local function index_of(array, key)
+    for i, v in ipairs(array) do
+        if v == key then return i end
+    end
+    return nil
 end
 
-local function is_sub_file(filename)
-    return SUB_EXT_SET[file_ext(filename):lower()]
-end
-
-local function is_video_file(filename)
-    return VID_EXT_SET[file_ext(filename):lower()]
+local function extract_numbers(str)
+    local numbers = {}
+    for num in str:gmatch("%d+") do
+        table.insert(numbers, tonumber(num))
+    end
+    return numbers
 end
 
 -- Attempts to determine the episode number by finding the first differing numeric component compared to neighboring files.
@@ -146,6 +139,12 @@ local function collect_subs(dir, prefix, depth)
     end
 
     return results
+end
+
+local function sorted_copy(array)
+    local copy = {unpack(array)}
+    table.sort(copy)
+    return copy
 end
 
 local function load_subs()
