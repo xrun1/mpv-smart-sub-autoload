@@ -131,17 +131,18 @@ local function collect_subs(dir, prefix, depth)
         end
     end
 
-    if depth < config.max_depth then
-        local subdirs = utils.readdir(dir, "dirs")
-        if subdirs then
-            table.sort(subdirs)
-            for _, subdir in ipairs(subdirs) do
-                local next_dir = utils.join_path(dir, subdir)
-                local sub_results = collect_subs(next_dir, prefix .. subdir .. "/", depth + 1)
-                for _, entry in ipairs(sub_results) do
-                    table.insert(results, entry)
-                end
-            end
+    if depth >= config.max_depth then
+        return results
+    end
+
+    local subdirs = utils.readdir(dir, "dirs") or {}
+    table.sort(subdirs)
+    
+    for _, subdir in ipairs(subdirs) do
+        local next_dir = utils.join_path(dir, subdir)
+        local sub_results = collect_subs(next_dir, prefix .. subdir .. "/", depth + 1)
+        for _, entry in ipairs(sub_results) do
+            table.insert(results, entry)
         end
     end
 
