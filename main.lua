@@ -74,6 +74,12 @@ local function is_video_file(filename)
     return VID_EXT_SET[file_ext(filename):lower()]
 end
 
+-- Attempts to determine the episode number by finding the first differing numeric component compared to neighboring files.
+-- For example, given files:
+-- /Non Non Biyori.S02E02.CC.ja.srt
+-- /Non Non Biyori.S02E02.CC.ja_original.srt
+-- /Non Non Biyori.S02E03.CC.ja.srt
+-- The function returns 02 for the first two files, and 03 for the third.
 local function episode_number(file, sorted_files)
     local idx = index_of(sorted_files, file)
     if not idx then
