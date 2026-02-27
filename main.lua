@@ -120,8 +120,8 @@ local function collect_subs(dir, prefix, depth)
     local files = utils.readdir(dir, "files")
     if files then
         for _, f in ipairs(files) do
-            if is_video_file(f) then
-                if depth > 0 then return {} end
+            if depth > 0 and is_video_file(f) then
+                return {}
             elseif is_sub_file(f) then
                 table.insert(results, {
                     path = utils.join_path(dir, f),
