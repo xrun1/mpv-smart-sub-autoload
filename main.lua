@@ -8,9 +8,18 @@ local function to_set(array)
     end
     return set
 end
+local DEFAULT_SUB_EXTS = {
+    "ass", "idx", "lrc", "mks", "pgs", "rt", "sbv", "scc", "smi",
+    "srt", "srv3", "ssa", "sub", "sup", "utf", "utf-8", "utf8", "vtt", "ytt"
+}
 
-local SUB_EXT_SET = to_set(mp.get_property_native("sub-auto-exts") or {})
-local VID_EXT_SET = to_set(mp.get_property_native("video-exts") or {})
+local DEFAULT_VIDEO_EXTS = {
+    "3g2", "3gp", "avi", "flv", "ivf", "m2ts", "m4v", "mj2", "mkv",
+    "mov", "mp4", "mpeg", "mpg", "mxf", "ogv", "rmvb", "ts", "webm", "wmv", "y4m"
+}
+
+local SUB_EXT_SET = to_set(mp.get_property_native("sub-auto-exts") or DEFAULT_SUB_EXTS)
+local VID_EXT_SET = to_set(mp.get_property_native("video-exts") or DEFAULT_VIDEO_EXTS)
 
 local config = {
     auto_select_first_matching_sub = true,
