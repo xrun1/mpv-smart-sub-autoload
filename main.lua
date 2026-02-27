@@ -27,16 +27,6 @@ local config = {
 }
 require("mp.options").read_options(config)
 
-local function base_dir(path)
-    local dir, _ = utils.split_path(path)
-    return dir
-end
-
-local function file_name(path)
-    local _, name = utils.split_path(path)
-    return name
-end
-
 local function file_ext(path)
     return path:match("%.([^%.]+)$") or ""
 end
@@ -163,8 +153,7 @@ local function load_subs()
     
     if not path or path:find("://") then return end
 
-    local dir = base_dir(path)
-    local file = file_name(path)
+    local dir, file = utils.split_path(path)
 
     local all_files = utils.readdir(dir, "files")
     if not all_files then return end
