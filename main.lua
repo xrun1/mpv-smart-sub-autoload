@@ -14,7 +14,7 @@ local VID_EXT_SET = to_set(mp.get_property_native("video-exts") or {})
 
 local config = {
     auto_select_first_matching_sub = true,
-    max_depth = 3,
+    max_depth = 1,
 }
 require("mp.options").read_options(config)
 
