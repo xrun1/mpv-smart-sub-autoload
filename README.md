@@ -59,7 +59,7 @@ are found for a video, add the line:
 auto_select_first_matching_sub=no
 ```
 
-To limit the search depth in subfolders add the line (default: 3):
+To limit the search depth in subfolders add the line (default: 1):
 ```
-max_depth=3
+max_depth=1
 ```
