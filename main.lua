@@ -83,7 +83,8 @@ local function episode_number(file, sorted_files)
 
     local function compare(i)
         local other_numbers = extract_numbers(sorted_files[i])
-        for n = 1, #numbers do
+        local len = math.min(#numbers, #other_numbers)
+        for n = 1, len do
             if numbers[n] ~= other_numbers[n] then
                 return numbers[n]
             end
