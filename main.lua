@@ -88,7 +88,7 @@ local function episode_number(file, sorted_files)
                 return numbers[n]
             end
         end
-        return numbers[1]
+        return nil
     end
 
     for i = idx + 1, #sorted_files do
